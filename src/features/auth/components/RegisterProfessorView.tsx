@@ -1,23 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import type { RegisterRequest } from "@/services/auth/auth.dto";
+import type { RegisterProfessorRequest } from "@/services/auth/auth.dto";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 
-type AdminRegisterFormData = Omit<RegisterRequest, "role">;
+export type ProfessorRegisterFormData = Omit<RegisterProfessorRequest, "role">;
 
-interface RegisterViewProps {
-    onRegister: (formData: AdminRegisterFormData) => Promise<void>;
+interface RegisterProfessorViewProps {
+    onRegister: (formData: ProfessorRegisterFormData) => Promise<void>;
     loading: boolean;
     error: string | null;
 }
 
-export default function RegisterView({ onRegister, loading, error }: RegisterViewProps) {
-    const [formData, setFormData] = useState<AdminRegisterFormData>({
+const inputClassName =
+    "relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1";
+
+export default function RegisterProfessorView({ onRegister, loading, error }: RegisterProfessorViewProps) {
+    const [formData, setFormData] = useState<ProfessorRegisterFormData>({
         name: "",
         email: "",
         password: "",
+        university: "",
+        department: "",
     });
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -36,27 +41,23 @@ export default function RegisterView({ onRegister, loading, error }: RegisterVie
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="w-full max-w-md space-y-8">
-                {/* Header */}
                 <div className="text-center">
                     <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-                        Create your ProfConnect account
+                        Sign up as a professor
                     </h2>
                     <p className="mt-2 text-sm text-gray-600">
-                        Join thousands of professionals networking together
+                        Share your expertise and mentor the next generation
                     </p>
                 </div>
 
-                {/* Error Message */}
                 {error && (
                     <div className="rounded-md bg-red-50 p-4">
                         <p className="text-sm font-medium text-red-800">{error}</p>
                     </div>
                 )}
 
-                {/* Register Form */}
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4 rounded-md shadow-sm">
-                        {/* Name Input */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                                 Full name
@@ -69,12 +70,11 @@ export default function RegisterView({ onRegister, loading, error }: RegisterVie
                                 value={formData.name}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1"
-                                placeholder="John Doe"
+                                className={inputClassName}
+                                placeholder="Dr. John Smith"
                             />
                         </div>
 
-                        {/* Email Input */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                 Email address
@@ -87,12 +87,11 @@ export default function RegisterView({ onRegister, loading, error }: RegisterVie
                                 value={formData.email}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1"
-                                placeholder="you@example.com"
+                                className={inputClassName}
+                                placeholder="you@university.edu"
                             />
                         </div>
 
-                        {/* Password Input */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                                 Password
@@ -105,19 +104,57 @@ export default function RegisterView({ onRegister, loading, error }: RegisterVie
                                 value={formData.password}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1"
+                                className={inputClassName}
                                 placeholder="••••••••"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="university" className="block text-sm font-medium text-gray-700">
+                                University
+                            </label>
+                            <input
+                                id="university"
+                                name="university"
+                                type="text"
+                                required
+                                value={formData.university}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Stanford University"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                                Department
+                            </label>
+                            <input
+                                id="department"
+                                name="department"
+                                type="text"
+                                required
+                                value={formData.department}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Computer Science"
                             />
                         </div>
                     </div>
 
-                    {/* Submit Button */}
                     <Button type="submit" disabled={loading}>
                         {loading ? <Spinner size={18} /> : "Sign up"}
                     </Button>
 
-                    {/* Login Link */}
-                    <div className="text-center">
+                    <div className="text-center space-y-1">
+                        <p className="text-sm text-gray-600">
+                            Are you a student?{" "}
+                            <a href="/register/student" className="font-medium text-blue-600 hover:text-blue-500">
+                                Register as student
+                            </a>
+                        </p>
                         <p className="text-sm text-gray-600">
                             Already have an account?{" "}
                             <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">

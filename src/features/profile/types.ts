@@ -1,4 +1,4 @@
-type RoleEnum = "student" | "professor" | "admin";
+export type RoleEnum = "student" | "professor" | "admin";
 
 export function checkRole(role: string | null): RoleEnum {
     if (role === "student" || role === "professor" || role === "admin") {

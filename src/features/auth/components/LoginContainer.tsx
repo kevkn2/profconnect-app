@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { LoginRequest } from "@/services/auth.dto";
-import { authService } from "@/services/auth.service";
-import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { LoginRequest } from "@/services/auth/auth.dto";
+import { authService } from "@/services/auth/auth.service";
 import LoginView from "./LoginView";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginContainer() {
     const router = useRouter();
@@ -20,11 +20,20 @@ export default function LoginContainer() {
         try {
             const data = await authService.login(formData);
 
+            console.log("Login successful:", data);
+
             // Use auth provider to set token
-            login(data.token);
+            login(data.accessToken, data.refreshToken, data.role);
 
             // Redirect to dashboard
-            router.push("/dashboard");
+            if (data.role === "professor") {
+                router.push("/professor/dashboard");
+            } else if (data.role === "student") {
+                router.push("/student/dashboard");
+            } else if (data.role === "admin") {
+                router.push("/admin/dashboard");
+            }
+
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An error occurred";
             setError(errorMessage);

@@ -1,0 +1,189 @@
+"use client";
+
+import { useState } from "react";
+import type { RegisterStudentRequest } from "@/services/auth/auth.dto";
+import Button from "@/components/ui/Button";
+import Spinner from "@/components/ui/Spinner";
+
+export type StudentRegisterFormData = Omit<RegisterStudentRequest, "role">;
+
+interface RegisterStudentViewProps {
+    onRegister: (formData: StudentRegisterFormData) => Promise<void>;
+    loading: boolean;
+    error: string | null;
+}
+
+const inputClassName =
+    "relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1";
+
+export default function RegisterStudentView({ onRegister, loading, error }: RegisterStudentViewProps) {
+    const [formData, setFormData] = useState<StudentRegisterFormData>({
+        name: "",
+        email: "",
+        password: "",
+        university: "",
+        department: "",
+        research_interests: "",
+    });
+
+    async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        await onRegister(formData);
+    }
+
+    function handleChange(
+        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) {
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    }
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-md space-y-8">
+                <div className="text-center">
+                    <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
+                        Sign up as a student
+                    </h2>
+                    <p className="mt-2 text-sm text-gray-600">
+                        Connect with professors and accelerate your learning
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="rounded-md bg-red-50 p-4">
+                        <p className="text-sm font-medium text-red-800">{error}</p>
+                    </div>
+                )}
+
+                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <div className="space-y-4 rounded-md shadow-sm">
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                Full name
+                            </label>
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Jane Doe"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                Email address
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="you@university.edu"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                value={formData.password}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="university" className="block text-sm font-medium text-gray-700">
+                                University
+                            </label>
+                            <input
+                                id="university"
+                                name="university"
+                                type="text"
+                                required
+                                value={formData.university}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Stanford University"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                                Department
+                            </label>
+                            <input
+                                id="department"
+                                name="department"
+                                type="text"
+                                required
+                                value={formData.department}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Computer Science"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="research_interests" className="block text-sm font-medium text-gray-700">
+                                Research interests
+                            </label>
+                            <textarea
+                                id="research_interests"
+                                name="research_interests"
+                                required
+                                rows={3}
+                                value={formData.research_interests}
+                                onChange={handleChange}
+                                disabled={loading}
+                                className={inputClassName}
+                                placeholder="Machine learning, distributed systems, ..."
+                            />
+                        </div>
+                    </div>
+
+                    <Button type="submit" disabled={loading}>
+                        {loading ? <Spinner size={18} /> : "Sign up"}
+                    </Button>
+
+                    <div className="text-center space-y-1">
+                        <p className="text-sm text-gray-600">
+                            Are you a professor?{" "}
+                            <a href="/register/professor" className="font-medium text-blue-600 hover:text-blue-500">
+                                Register as professor
+                            </a>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                            Already have an account?{" "}
+                            <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                                Sign in
+                            </a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}

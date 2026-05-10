@@ -2,23 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RegisterRequest } from "@/services/auth/auth.dto";
 import { authService } from "@/services/auth/auth.service";
-import RegisterView from "./RegisterView";
+import RegisterStudentView, { type StudentRegisterFormData } from "./RegisterStudentView";
 
-type AdminRegisterFormData = Omit<RegisterRequest, "role">;
-
-export default function RegisterContainer() {
+export default function RegisterStudentContainer() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    async function handleRegister(formData: AdminRegisterFormData) {
+    async function handleRegister(formData: StudentRegisterFormData) {
         setLoading(true);
         setError(null);
 
         try {
-            await authService.register(formData);
+            await authService.registerStudent(formData);
             router.push("/login?registered=true");
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : "An error occurred";
@@ -28,5 +25,5 @@ export default function RegisterContainer() {
         }
     }
 
-    return <RegisterView onRegister={handleRegister} loading={loading} error={error} />;
+    return <RegisterStudentView onRegister={handleRegister} loading={loading} error={error} />;
 }

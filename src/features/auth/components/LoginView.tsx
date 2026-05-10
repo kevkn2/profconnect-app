@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { LoginRequest } from "@/services/auth.dto";
+import type { LoginRequest } from "@/services/auth/auth.dto";
 import Button from "@/components/ui/Button";
 import Spinner from "@/components/ui/Spinner";
 

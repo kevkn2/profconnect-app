@@ -1,6 +1,6 @@
-import { RegisterContainer } from "@/features/auth/components";
+import { redirect } from "next/navigation";
 
 
 export default function RegisterPage() {
-    return <RegisterContainer />;
+    redirect("/register/student");
 }

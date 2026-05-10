@@ -27,8 +27,8 @@ const Sidebar: React.FC<SidebarProps> = ({ navItems, children }) => {
     };
 
     return (
-        <div className="flex min-h-screen w-full">
-            <aside className="flex w-64 flex-col bg-white shadow-lg">
+        <div className="flex min-h-screen w-full overflow-hidden">
+            <aside className="flex min-h-screen w-64 flex-shrink-0 flex-col bg-white shadow-lg">
                 <div className="border-b p-4">
                     <h2 className="text-lg font-semibold">Menu</h2>
                 </div>
@@ -72,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ navItems, children }) => {
                 </div>
             </aside>
 
-            <main className="flex-1 min-w-0 overflow-auto">
+            <main className="flex-1 w-full overflow-y-auto bg-gray-50">
                 {children}
             </main>
         </div>

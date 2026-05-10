@@ -7,9 +7,7 @@ import { studentService } from "@/services/student/student.service";
 import { professorService } from "@/services/professor/professor.service";
 import { ProfessorProfile } from "@/services/professor/professor.dto";
 import { StudentProfile } from "@/services/student/student.dto";
-import { redirect } from "next/navigation";
 import { checkRole } from "../types";
-import Sidebar from "@/components/layout/Sidebar";
 
 export default function ProfileContainer() {
     const { accessToken, role, loading: authLoading } = useAuth();
@@ -72,8 +70,6 @@ export default function ProfileContainer() {
             };
         }
     }, [accessToken, authLoading]);
-
-    if (!role) redirect("/login")
 
     return (
         <ProfileView

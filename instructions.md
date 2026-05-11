@@ -1,12 +1,12 @@
-# 📘 Frontend Architecture Instructions
+# 📘 ProfConnect Frontend Architecture
 
-**Tech Stack:** Next.js (App Router), TypeScript, Tailwind CSS
+**Tech Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Zod
 
 ---
 
 ## 1. Purpose
 
-This document defines standards and best practices for building a **scalable, maintainable, and production-ready frontend**.
+This document describes the **actual** architecture of the ProfConnect frontend and the standards used when extending it. The codebase follows a feature-based Clean Architecture pattern that connects a Next.js client to a separate backend API.
 
 Goals:
 
@@ -21,78 +21,143 @@ Goals:
 
 ## 2. Tech Stack
 
-| Layer         | Technology                         |
-| ------------- | ---------------------------------- |
-| Framework     | Next.js (App Router)               |
-| Language      | TypeScript                         |
-| Styling       | Tailwind CSS                       |
-| State         | React Context / Zustand (optional) |
-| Data Fetching | Fetch / React Query (optional)     |
-| Validation    | Zod                                |
-| Linting       | ESLint + Prettier                  |
+| Layer         | Technology                                    |
+| ------------- | --------------------------------------------- |
+| Framework     | Next.js 16 (App Router)                       |
+| UI Runtime    | React 19                                      |
+| Language      | TypeScript 5                                  |
+| Styling       | Tailwind CSS 4 (`@tailwindcss/postcss`)       |
+| Fonts         | `next/font/google` — Geist Sans / Geist Mono  |
+| Auth State    | React Context (`AuthProvider` via `useAuth`)  |
+| Data Fetching | Native `fetch` wrapped in service modules     |
+| Validation    | Zod                                           |
+| Linting       | ESLint (`eslint-config-next`)                 |
+| Package Mgr   | pnpm (workspace)                              |
+
+Scripts (from [package.json](package.json)):
+
+```bash
+pnpm dev     # next dev
+pnpm build   # next build
+pnpm start   # next start
+pnpm lint    # eslint
+```
 
 ---
 
-## 3. Project Structure
+## 3. Actual Project Structure
 
 ```
 src/
-├── app/                # Next.js routing (App Router)
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── (routes)/
+├── app/                              # Next.js App Router
+│   ├── layout.tsx                    # RootLayout — mounts <AuthProvider>
+│   ├── page.tsx                      # "/" → redirect("/login")
+│   ├── globals.css                   # Tailwind + theme vars
+│   │
+│   ├── login/page.tsx                # → LoginContainer
+│   ├── register/
+│   │   ├── page.tsx                  # → redirect("/register/student")
+│   │   ├── student/page.tsx          # → RegisterStudentContainer
+│   │   └── professor/page.tsx        # → RegisterProfessorContainer
+│   │
+│   ├── professor/                    # Professor-only routes
+│   │   ├── layout.tsx                # ProtectedLayout + Sidebar (professor nav)
+│   │   ├── page.tsx                  # → redirect("/professor/dashboard")
+│   │   ├── dashboard/page.tsx        # → DashboardView
+│   │   └── profile/page.tsx          # → ProfileContainer
+│   │
+│   └── student/                      # Student-only routes
+│       ├── layout.tsx                # ProtectedLayout + Sidebar (student nav)
+│       ├── page.tsx                  # → redirect("/student/dashboard")
+│       ├── dashboard/page.tsx        # → DashboardView
+│       └── profile/page.tsx          # → ProfileContainer
 │
-├── components/         # Reusable UI components
-│   ├── ui/             # Atomic components
-│   └── layout/         # Layout components
+├── components/
+│   ├── ui/                           # Atomic, reusable UI primitives
+│   │   ├── Button.tsx
+│   │   └── Spinner.tsx
+│   └── layout/                       # Layout building blocks
+│       ├── Sidebar.tsx               # Nav rail + logout button
+│       └── ProtectedLayout.tsx       # Auth gate (redirects to /login)
 │
-├── features/           # Feature-based modules
-│   └── auth/
+├── features/                         # Feature modules (vertical slices)
+│   ├── auth/
+│   │   ├── components/
+│   │   │   ├── LoginContainer.tsx / LoginView.tsx
+│   │   │   ├── RegisterContainer.tsx / RegisterView.tsx
+│   │   │   ├── RegisterStudentContainer.tsx / RegisterStudentView.tsx
+│   │   │   ├── RegisterProfessorContainer.tsx / RegisterProfessorView.tsx
+│   │   │   └── index.ts              # Barrel exports
+│   │   └── types.ts                  # Re-exports auth DTO types
+│   │
+│   ├── dashboard/
+│   │   ├── components/
+│   │   │   └── DashboardView.tsx
+│   │   └── types.ts                  # re-exports RoleEnum / checkRole from @/types/role
+│   │
+│   └── profile/
 │       ├── components/
-│       ├── hooks/
-│       ├── services/
-│       └── types.ts
+│       │   ├── ProfileContainer.tsx
+│       │   ├── ProfileView.tsx
+│       │   ├── ProfileField.tsx
+│       │   └── index.ts
+│       ├── types.ts                  # re-exports RoleEnum / checkRole from @/types/role
+│       └── index.ts
 │
-├── hooks/              # Global reusable hooks
+├── hooks/
+│   └── useAuth.tsx                   # AuthProvider + useAuth() context hook
 │
-├── lib/                # Shared utilities
-│   ├── api/
-│   ├── config/
-│   └── utils/
+├── services/                         # API clients (domain per folder)
+│   ├── auth/
+│   │   ├── auth.dto.ts               # Request/Response interfaces
+│   │   └── auth.service.ts           # login, register, registerStudent, registerProfessor
+│   ├── professor/
+│   │   ├── professor.dto.ts          # ProfessorProfile
+│   │   └── professor.service.ts      # getProfile
+│   └── student/
+│       ├── student.dto.ts            # StudentProfile
+│       └── student.service.ts        # getProfile
 │
-├── services/           # API services
+├── config/
+│   └── settings.ts                   # API_URL constant (from NEXT_PUBLIC_API_URL)
 │
-├── store/              # Global state
-│
-├── styles/             # Global styles
-│
-├── types/              # Global types
-│
-└── middleware.ts
+└── types/
+    └── role.ts                       # RoleEnum + checkRole() — canonical role guard
 ```
 
 ---
 
 ## 4. Folder Responsibilities
 
-### `/app`
+### `/app` — Routing only
 
-Contains routing and pages.
-
-Rules:
-
-* No business logic
-* No API logic
-* Only composition
-
-Example:
+App Router pages compose feature containers. They do **not** contain business logic.
 
 ```tsx
-// app/dashboard/page.tsx
-import DashboardView from "@/features/dashboard/components/DashboardView";
+// app/login/page.tsx
+import LoginContainer from "@/features/auth/components/LoginContainer";
 
-export default function Page() {
-  return <DashboardView />;
+export default function LoginPage() {
+    return <LoginContainer />;
+}
+```
+
+Role-scoped routes (`/professor/*`, `/student/*`) wrap their tree in `ProtectedLayout` + `Sidebar`:
+
+```tsx
+// app/professor/layout.tsx
+const professorNavItems = [
+    { label: "Dashboard", path: "/professor/dashboard" },
+    { label: "Settings",  path: "/professor/settings"  },
+    { label: "Profile",   path: "/professor/profile"   },
+];
+
+export default function ProfessorLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <ProtectedLayout>
+            <Sidebar navItems={professorNavItems}>{children}</Sidebar>
+        </ProtectedLayout>
+    );
 }
 ```
 
@@ -100,383 +165,273 @@ export default function Page() {
 
 ### `/components`
 
-Reusable UI elements.
+#### `ui/` — Atomic, props-driven primitives
 
-Types:
+* `Button` — variants via `loading`, `fullWidth`, plus all native button props
+* `Spinner` — sized SVG spinner
 
-#### `ui/` (Atomic)
+Rules: no API calls, no business logic, no `useAuth`.
 
-* Button
-* Input
-* Modal
-* Card
+#### `layout/` — Layout shells
 
-#### `layout/`
-
-* Navbar
-* Sidebar
-* Footer
-
-Rules:
-
-* No API calls
-* No business logic
-* Props-driven only
+* `ProtectedLayout` — client component, uses `useAuth()`, redirects unauthenticated users to `/login`, renders a loading state while auth hydrates
+* `Sidebar` — client component, renders nav items + logout, highlights active route via `usePathname()`
 
 ---
 
-### `/features`
+### `/features` — Vertical slices
 
-Each business domain lives here.
+Each feature owns its `components/`, optional `hooks/`, optional local `services/`, `types.ts`, and a barrel `index.ts`.
 
-Example:
+**Container → View pattern is the standard:**
 
 ```
-features/auth/
-├── components/
-├── hooks/
-├── services/
-├── types.ts
+ProfileContainer  (data fetching, auth, error state)
+   ↓
+ProfileView       (presentation only, props-driven)
+   ↓
+ProfileField, Spinner  (atomic UI)
 ```
 
-Rules:
+Example — [src/features/profile/components/ProfileContainer.tsx](src/features/profile/components/ProfileContainer.tsx):
 
-* Self-contained
-* No cross-feature imports
-* Can use shared `lib`
-
----
-
-### `/services`
-
-All API communication.
-
-Rules:
-
-* No React code
-* Only fetch logic
-* Typed responses
-
-Example:
-
-```ts
-// services/userService.ts
-
-export async function getProfile() {
-  const res = await fetch("/api/profile");
-  return res.json();
+```tsx
+export default function ProfileContainer() {
+    const { accessToken, role, loading: authLoading } = useAuth();
+    const [profile, setProfile] = useState<ProfessorProfile | StudentProfile | null>(null);
+    // ...fetch based on role, hand off to ProfileView
+    return <ProfileView role={checkRole(role)} profile={profile} loading={loading} error={error} />;
 }
 ```
 
----
+Rules:
 
-### `/lib`
-
-Shared logic.
-
-Includes:
-
-* API clients
-* Helpers
-* Config
-
-Example:
-
-```
-lib/api/
-lib/utils/
-lib/constants.ts
-```
+* Features are self-contained.
+* No cross-feature imports — share via `/components`, `/services`, `/hooks`, or `/lib`.
+* Containers may use services and hooks; Views must not.
 
 ---
 
-### `/store`
+### `/services` — API clients
 
-Global state management.
+Convention: **one folder per domain**, with `<domain>.dto.ts` and `<domain>.service.ts`.
 
-Use only when needed.
+* `dto.ts` — request/response TypeScript interfaces only (no runtime code beyond types).
+* `service.ts` — a small `fetch` wrapper plus named exports, exposed as a `<domain>Service` object for ergonomic imports.
 
-Allowed:
+Example — [src/services/auth/auth.service.ts](src/services/auth/auth.service.ts):
 
-* Zustand
-* Context
+```ts
+import { API_URL } from "@/config/settings";
 
-Avoid:
+async function postJson<TBody, TResponse>(path: string, body: TBody, errorPrefix: string): Promise<TResponse> {
+    const response = await fetch(`${API_URL}/api/auth${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(`${errorPrefix}: ${data.message ?? "Unknown error"}`);
+    return data as TResponse;
+}
 
-* Storing server data (use cache/query tools)
+export async function login(params: LoginRequest): Promise<LoginResponse> {
+    return postJson<LoginRequest, LoginResponse>("/login", params, "Login failed");
+}
+
+export const authService = { register, registerStudent, registerProfessor, login };
+```
+
+Authenticated services accept the access token as an argument and set `Authorization: Bearer <token>` (see [professor.service.ts](src/services/professor/professor.service.ts), [student.service.ts](src/services/student/student.service.ts)).
+
+Rules:
+
+* No React imports in `/services`.
+* Always read base URL from `@/config/settings` — never hardcode.
+* Throw `Error` on non-OK responses; let containers translate to UI state.
+
+---
+
+### `/hooks` — Global hooks
+
+Currently:
+
+* [useAuth.tsx](src/hooks/useAuth.tsx) — `AuthProvider` context + `useAuth()` consumer hook. Persists `accessToken`, `refreshToken`, and `role` in `localStorage`, exposes `login()`, `logout()`, `isAuthenticated`, and `loading` (true until storage is hydrated on mount).
+
+---
+
+### `/config`
+
+* [settings.ts](src/config/settings.ts):
+
+  ```ts
+  export const API_URL = process.env.API_URL || "http://localhost:3001";
+  ```
+
+  Note: this reads `API_URL` (not `NEXT_PUBLIC_API_URL`). If the value needs to be available in client components, prefix with `NEXT_PUBLIC_` so Next.js inlines it at build time.
 
 ---
 
 ### `/types`
 
-Global TypeScript types.
+Cross-cutting global types. Feature-local types live in each feature's `types.ts`; anything shared across features (e.g. role enums) lives here.
 
-Example:
-
-```ts
-export type User = {
-  id: string;
-  name: string;
-};
-```
+* [role.ts](src/types/role.ts) — `RoleEnum` and `checkRole()` runtime guard. Imported by any feature that needs role narrowing; feature-local `types.ts` files re-export from here so consumers can still `import { ... } from "../types"`.
 
 ---
 
 ## 5. Component Design Rules
 
-### 5.1 Component Types
+| Type      | Responsibility                                  | Example                  |
+| --------- | ----------------------------------------------- | ------------------------ |
+| Page      | Route composition, no logic                     | `app/login/page.tsx`     |
+| Container | State, fetching, auth wiring                    | `LoginContainer`         |
+| View      | UI only, props-driven, can hold form state      | `LoginView`              |
+| UI        | Atomic, reusable primitives                     | `Button`, `Spinner`      |
 
-| Type      | Responsibility    |
-| --------- | ----------------- |
-| Page      | Route composition |
-| Container | Data + logic      |
-| View      | UI only           |
-| UI        | Atomic elements   |
-
----
-
-### 5.2 Pattern
-
-Use **Container → View → UI**:
-
-```
-DashboardContainer
-  ↓
-DashboardView
-  ↓
-Button / Card / Table
-```
-
-Example:
-
-```tsx
-// Container
-export function DashboardContainer() {
-  const data = useDashboard();
-  return <DashboardView data={data} />;
-}
-```
+Form-bearing views may own their own local form state (`useState`) — see `LoginView`, `RegisterStudentView`. Submission is delegated to the container via an `onX` prop.
 
 ---
 
-## 6. Styling Rules (Tailwind)
+## 6. Styling (Tailwind 4)
 
-### Principles
-
-* Utility-first
-* No inline styles
-* No large CSS files
-
-Allowed:
-
-```tsx
-<div className="flex gap-4 p-4">
-```
-
-Avoid:
-
-```tsx
-style={{ padding: 20 }}
-```
-
----
-
-### Shared Styles
-
-Use `clsx` / `tailwind-merge` for variants:
-
-```ts
-cn("px-4", active && "bg-blue-500");
-```
+* Utility-first — no inline `style={{...}}` except for dynamic values.
+* Tailwind directives are loaded via `@import "tailwindcss"` in [globals.css](src/app/globals.css).
+* Theme tokens are declared with `@theme inline` and CSS variables (`--background`, `--foreground`, `--font-geist-sans`, `--font-geist-mono`).
+* Long repeated class strings can be hoisted into a `const inputClassName = "..."` at module scope (see `RegisterStudentView`, `RegisterProfessorView`).
 
 ---
 
 ## 7. Data Fetching Strategy
 
-### Server Components (Default)
+### Client-side (current pattern)
 
-Prefer server fetching:
-
-```tsx
-const data = await getUsers();
-```
-
-### Client Fetching
-
-Only when needed:
-
-* Forms
-* Realtime
-* Interactions
-
-Use:
-
-* Fetch API via services
-* React Query (optional)
-
----
-
-### API Layer Rule
-
-❌ Never fetch in components directly
-❌ Never create API routes as middleman
-✅ Always call backend directly from services
-
-Bad:
+Auth-sensitive data uses **client containers** that call the service layer with an `accessToken` from `useAuth()`:
 
 ```tsx
-fetch("/api/user");
+const { accessToken, role } = useAuth();
+useEffect(() => {
+    if (!accessToken) return;
+    if (role === "student")    studentService.getProfile(accessToken).then(setProfile);
+    else if (role === "professor") professorService.getProfile(accessToken).then(setProfile);
+}, [accessToken, role]);
 ```
 
-Good:
+### Server-side
 
-```tsx
-userService.getUser();
-```
+Server Components remain the preferred path for public, cacheable data. Public landing/marketing pages should fetch on the server.
 
-Services call backend directly:
+### API layer rules
 
-```ts
-// services/userService.ts
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-export async function getUser() {
-  const res = await fetch(`${API_URL}/api/user`);
-  if (!res.ok) throw new Error('Failed to fetch');
-  return res.json();
-}
-```
+❌ Don't `fetch()` directly inside components.
+❌ Don't use Next.js Route Handlers as a proxy to the backend — there is no `src/app/api/` folder, and one should not be added.
+✅ Call the backend directly from `/services/<domain>/<domain>.service.ts`.
 
 ---
 
 ## 8. State Management
 
-### Local State
+Local UI state (`useState`) for forms, toggles, fetch state.
 
-Use `useState` for:
+Global state via React Context for cross-cutting concerns — currently only `AuthProvider`. No external state library in use; introduce one (Zustand / React Query) only when justified.
 
-* Form input
-* Toggles
-* UI state
-
----
-
-### Global State (Minimal)
-
-Use for:
-
-* Auth
-* Theme
-* Preferences
-
-Avoid storing:
-
-* Server data
-* Lists from API
+Do not store fetched server data in global state — keep it co-located in the container that needs it.
 
 ---
 
 ## 9. Type Safety
 
-### Mandatory
+Always typed:
 
-All of these must be typed:
+* API requests/responses — defined in `<domain>.dto.ts`.
+* Component props — explicit `interface` or `type`.
+* Hook return values — `AuthContextType` is the canonical example.
 
-* API responses
-* Props
-* Forms
-* Context
-
-Example:
+Role narrowing uses [`checkRole`](src/types/role.ts):
 
 ```ts
-type Props = {
-  user: User;
-};
+export type RoleEnum = "student" | "professor" | "admin";
+
+export function checkRole(role: string | null): RoleEnum {
+    if (role === "student" || role === "professor" || role === "admin") return role;
+    throw new Error("Invalid user role");
+}
 ```
 
----
+### Zod
 
-### Validation (Zod)
-
-Use Zod for:
-
-* Forms
-* API parsing
-
-```ts
-const schema = z.object({
-  email: z.string().email(),
-});
-```
+Use Zod for any user-input validation or untrusted parsing boundary. Currently a dependency but not yet exercised.
 
 ---
 
 ## 10. Environment Configuration
 
-Use `.env.local` files.
-
-Example:
+`.env.local` at the repo root:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-Access in services:
+[config/settings.ts](src/config/settings.ts) reads `NEXT_PUBLIC_API_URL` so the value is inlined into the client bundle by Next.js. Use `NEXT_PUBLIC_*` for anything the browser needs; keep secrets in non-prefixed vars used only on the server.
 
-```ts
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-```
-
-Never hardcode URLs. Always use environment variables.
+Never hardcode URLs — always go through `@/config/settings`.
 
 ---
 
 ## 11. Error Handling
 
-### API Errors
+### Services
 
-Always wrap:
+Throw `Error` with a prefixed message:
 
 ```ts
-try {
-  await fetch();
-} catch (err) {
-  throw new ApiError();
+if (!response.ok) throw new Error(`${errorPrefix}: ${data.message ?? "Unknown error"}`);
+```
+
+### Containers
+
+Convert thrown errors into `error: string | null` state and pass to the view:
+
+```ts
+catch (err) {
+    setError(err instanceof Error ? err.message : "An error occurred");
 }
 ```
 
----
+### Views
 
-### UI Errors
+Render the error inline (red banner pattern used in `LoginView`, `RegisterView`, `ProfileView`).
 
-Use error boundaries:
+### Routing errors
 
-```
-app/error.tsx
-```
+Use `app/error.tsx` (Next.js convention) when adding boundary-level handling.
 
 ---
 
-## 12. Performance Rules
+## 12. Authentication Flow
 
-### Mandatory
+1. `RootLayout` wraps the tree in `<AuthProvider>` ([app/layout.tsx](src/app/layout.tsx)).
+2. On mount, `AuthProvider` hydrates `accessToken` / `refreshToken` / `role` from `localStorage` and sets `loading: false`.
+3. `ProtectedLayout` waits for `loading === false`, then redirects to `/login` if unauthenticated.
+4. `LoginContainer` calls `authService.login()`, persists tokens via `useAuth().login()`, then routes to `/{role}/dashboard`.
+5. `Sidebar`'s logout button calls `useAuth().logout()` and pushes to `/login`.
 
-* Use `next/image`
-* Use `dynamic()` for heavy components
-* Use `memo` when needed
-
----
-
-### Avoid
-
-* Large client bundles
-* Global re-renders
-* Massive contexts
+⚠️ Tokens currently live in `localStorage`. For production, prefer HttpOnly cookies set by the backend to mitigate XSS-based token theft.
 
 ---
 
-## 13. Testing (Optional but Recommended)
+## 13. Performance
+
+* `next/image` for raster images.
+* `dynamic()` for heavy client-only components.
+* `React.memo` only when render profiling shows it helps.
+* Keep `"use client"` boundaries tight — pages, layouts, and views that don't need it should remain server components.
+
+---
+
+## 14. Testing (Not yet set up)
+
+Recommended when added:
 
 | Type | Tool            |
 | ---- | --------------- |
@@ -484,142 +439,105 @@ app/error.tsx
 | UI   | Testing Library |
 | E2E  | Playwright      |
 
-Focus on:
-
-* Business logic
-* Critical flows
+Prioritize: services, containers, role-routing edge cases.
 
 ---
 
-## 14. Security Practices
+## 15. Security Practices
 
-### Must Follow
-
-* Never trust client data
-* Validate server-side
-* Sanitize inputs
-* Hide secrets
+* Validate at every server/client boundary.
+* Sanitize user input before rendering as HTML.
+* No secrets in `NEXT_PUBLIC_*` variables.
+* Plan migration of auth tokens off `localStorage` (see §12).
 
 ---
 
-### Auth
+## 16. Naming Conventions
 
-* Tokens in HttpOnly cookies
-* No localStorage tokens (preferred)
-
----
-
-## 15. Naming Conventions
-
-### Files
-
-```
-PascalCase → Components
-camelCase → Hooks
-kebab-case → Routes
-```
-
-Example:
-
-```
-UserCard.tsx
-useAuth.ts
-dashboard-page
-```
+| Item        | Convention   | Example                      |
+| ----------- | ------------ | ---------------------------- |
+| Components  | PascalCase   | `LoginView.tsx`              |
+| Hooks       | camelCase    | `useAuth.tsx`                |
+| Routes      | kebab-case   | `app/register/student/`      |
+| Services    | dot-case     | `auth.service.ts`, `auth.dto.ts` |
+| Variables   | camelCase    | `accessToken`                |
+| Types       | PascalCase   | `LoginRequest`, `RoleEnum`   |
 
 ---
 
-### Variables
+## 17. Git Rules
+
+Branches: `main`, `develop`, `feature/*`, `fix/*`.
+
+Commit format (from recent history):
 
 ```
-camelCase
-```
-
-No abbreviations.
-
----
-
-## 16. Git Rules
-
-### Branches
-
-```
-main
-develop
-feature/*
-fix/*
-```
-
----
-
-### Commits
-
-Format:
-
-```
-feat: add login page
-fix: auth token refresh
+feat: add profile page
+fix: sidebars children node cant use whole screen width
 refactor: split dashboard logic
 ```
 
 ---
 
-## 17. Production Checklist
+## 18. Production Checklist
 
-Before release:
-
-* [ ] No console.logs
-* [ ] No unused imports
-* [ ] All env vars set
-* [ ] Types passing
-* [ ] Lint clean
-* [ ] Build success
+* [ ] No `console.log` in committed code
+* [ ] No unused imports / dead code
+* [ ] All required env vars set
+* [ ] `pnpm lint` clean
+* [ ] `pnpm build` succeeds
+* [ ] Type-check clean (`tsc --noEmit` if added)
 
 ---
 
-## 18. Architecture Principles
+## 19. Architecture Principles
 
-This frontend follows:
-
-* KISS
-* DRY
-* SOLID (where applicable)
-* Separation of Concerns
-* Feature Isolation
-* Type Safety First
+* KISS, DRY, SOLID (where applicable)
+* Separation of Concerns: Page → Container → View → UI
+* Feature isolation: no cross-feature imports
+* Type safety first
+* One backend call path: components → service module → backend
 
 ---
 
-## 19. Example Feature Template
+## 20. Adding a New Feature
+
+Use the existing `profile` feature as the template:
 
 ```
-features/profile/
+features/<feature>/
 ├── components/
-│   └── ProfileView.tsx
-├── hooks/
-│   └── useProfile.ts
-├── services/
-│   └── profileService.ts
-├── types.ts
-└── index.ts
+│   ├── <Feature>Container.tsx    # client, owns data/state
+│   ├── <Feature>View.tsx         # presentation, props-driven
+│   ├── <Feature>Field.tsx        # (optional) feature-local atoms
+│   └── index.ts                  # barrel
+├── types.ts                      # feature-local types / guards
+└── index.ts                      # barrel (re-export from components)
 ```
+
+If the feature needs a new backend resource, also add:
+
+```
+services/<domain>/
+├── <domain>.dto.ts               # request/response types
+└── <domain>.service.ts           # fetch wrapper + named exports + service object
+```
+
+Then wire a route under `src/app/<role>/<feature>/page.tsx` that renders the container.
 
 ---
 
-## 20. Final Rule
+## 21. Final Rule
 
-> If unsure, prefer:
->
 > Simplicity > Abstraction > Cleverness
 
 ---
 
 # ✅ Summary
 
-This architecture ensures:
+This frontend pairs a Next.js App Router with a feature-sliced architecture:
 
-* Clean separation
-* Scalable growth
-* Easy refactoring
-* Backend alignment
-* Team-friendly structure
+* **Pages** stay thin; **containers** own state; **views** stay presentational.
+* **Services** are the only path to the backend, scoped per domain with paired `.dto.ts` / `.service.ts` files.
+* **Auth** is centralized in a single context provider and gated via `ProtectedLayout` on role-scoped routes.
+* **Roles** (`student`, `professor`, `admin`) drive both routing and which service is called.

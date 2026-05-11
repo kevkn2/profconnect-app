@@ -2,7 +2,7 @@ import Spinner from "@/components/ui/Spinner";
 import { ProfessorProfile } from "@/services/professor/professor.dto";
 import { StudentProfile } from "@/services/student/student.dto";
 import { ProfileField } from "./ProfileField";
-import { RoleEnum } from "../types";
+import { RoleEnum } from "@/types/role";
 
 interface ProfileViewProps {
     role: RoleEnum;

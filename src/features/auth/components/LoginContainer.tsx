@@ -20,9 +20,6 @@ export default function LoginContainer() {
         try {
             const data = await authService.login(formData);
 
-            console.log("Login successful:", data);
-
-            // Use auth provider to set token
             login(data.accessToken, data.refreshToken, data.role);
 
             // Redirect to dashboard

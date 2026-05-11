@@ -7,7 +7,7 @@ import { studentService } from "@/services/student/student.service";
 import { professorService } from "@/services/professor/professor.service";
 import { ProfessorProfile } from "@/services/professor/professor.dto";
 import { StudentProfile } from "@/services/student/student.dto";
-import { checkRole } from "../types";
+import { checkRole } from "@/types/role";
 
 export default function ProfileContainer() {
     const { accessToken, role, loading: authLoading } = useAuth();
@@ -30,46 +30,38 @@ export default function ProfileContainer() {
         setLoading(true);
         setError(null);
 
-        if (role === "student") {
-            studentService
-                .getProfile(accessToken)
-                .then((data) => {
-                    if (!cancelled) setProfile(data);
-                })
-                .catch((err) => {
-                    if (!cancelled) {
-                        setError(
-                            err instanceof Error
-                                ? err.message
-                                : "Failed to load student profile",
-                        );
-                    }
-                })
-                .finally(() => {
-                    if (!cancelled) setLoading(false);
-                });
-        } else if (role === "professor") {
-            professorService
-                .getProfile(accessToken)
-                .then((data) => {
-                    if (!cancelled) setProfile(data);
-                })
-                .catch((err) => {
-                    if (!cancelled) {
-                        setError(
-                            err instanceof Error ? err.message : "Failed to load profile",
-                        );
-                    }
-                })
-                .finally(() => {
-                    if (!cancelled) setLoading(false);
-                });
+        const fetcher =
+            role === "student"
+                ? studentService.getProfile(accessToken)
+                : role === "professor"
+                    ? professorService.getProfile(accessToken)
+                    : null;
 
-            return () => {
-                cancelled = true;
-            };
+        if (!fetcher) {
+            setLoading(false);
+            setError("Unsupported role");
+            return;
         }
-    }, [accessToken, authLoading]);
+
+        fetcher
+            .then((data) => {
+                if (!cancelled) setProfile(data);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setError(
+                        err instanceof Error ? err.message : "Failed to load profile",
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [accessToken, authLoading, role]);
 
     return (
         <ProfileView

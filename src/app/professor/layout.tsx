@@ -3,6 +3,7 @@ import { ProtectedLayout } from "@/components/layout/ProtectedLayout";
 
 const professorNavItems = [
     { label: "Dashboard", path: "/professor/dashboard" },
+    { label: "Projects", path: "/professor/projects" },
     { label: "Settings", path: "/professor/settings" },
     { label: "Profile", path: "/professor/profile" },
 ];

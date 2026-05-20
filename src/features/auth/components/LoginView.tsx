@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { LoginRequest } from "@/services/auth/auth.dto";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import Spinner from "@/components/ui/Spinner";
 
 interface LoginViewProps {
@@ -58,7 +59,7 @@ export default function LoginView({ onLogin, loading, error }: LoginViewProps) {
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                 Email address
                             </label>
-                            <input
+                            <Input
                                 id="email"
                                 name="email"
                                 type="email"
@@ -66,7 +67,6 @@ export default function LoginView({ onLogin, loading, error }: LoginViewProps) {
                                 value={formData.email}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1"
                                 placeholder="you@example.com"
                             />
                         </div>
@@ -76,7 +76,7 @@ export default function LoginView({ onLogin, loading, error }: LoginViewProps) {
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                                 Password
                             </label>
-                            <input
+                            <Input
                                 id="password"
                                 name="password"
                                 type="password"
@@ -84,7 +84,6 @@ export default function LoginView({ onLogin, loading, error }: LoginViewProps) {
                                 value={formData.password}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1"
                                 placeholder="••••••••"
                             />
                         </div>
@@ -98,7 +97,7 @@ export default function LoginView({ onLogin, loading, error }: LoginViewProps) {
                     {/* Register Link */}
                     <div className="text-center">
                         <p className="text-sm text-gray-600">
-                            Don't have an account?{" "}
+                            Don&apos;t have an account?{" "}
                             <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
                                 Sign up
                             </a>

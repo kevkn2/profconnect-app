@@ -1,5 +1,5 @@
-import { DashboardView } from '@/features/dashboard/components/DashboardView'
+import DashboardContainer from "@/features/dashboard/components/DashboardContainer";
 
 export default function DashboardPage() {
-    return <DashboardView />
+    return <DashboardContainer />;
 }

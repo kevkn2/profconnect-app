@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RegisterProfessorRequest } from "@/services/auth/auth.dto";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import Spinner from "@/components/ui/Spinner";
 
 export type ProfessorRegisterFormData = Omit<RegisterProfessorRequest, "role">;
@@ -12,9 +13,6 @@ interface RegisterProfessorViewProps {
     loading: boolean;
     error: string | null;
 }
-
-const inputClassName =
-    "relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm mt-1";
 
 export default function RegisterProfessorView({ onRegister, loading, error }: RegisterProfessorViewProps) {
     const [formData, setFormData] = useState<ProfessorRegisterFormData>({
@@ -62,7 +60,7 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                                 Full name
                             </label>
-                            <input
+                            <Input
                                 id="name"
                                 name="name"
                                 type="text"
@@ -70,7 +68,6 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                                 value={formData.name}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className={inputClassName}
                                 placeholder="Dr. John Smith"
                             />
                         </div>
@@ -79,7 +76,7 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                 Email address
                             </label>
-                            <input
+                            <Input
                                 id="email"
                                 name="email"
                                 type="email"
@@ -87,7 +84,6 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                                 value={formData.email}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className={inputClassName}
                                 placeholder="you@university.edu"
                             />
                         </div>
@@ -96,7 +92,7 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                                 Password
                             </label>
-                            <input
+                            <Input
                                 id="password"
                                 name="password"
                                 type="password"
@@ -104,7 +100,6 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                                 value={formData.password}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className={inputClassName}
                                 placeholder="••••••••"
                             />
                         </div>
@@ -113,7 +108,7 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                             <label htmlFor="university" className="block text-sm font-medium text-gray-700">
                                 University
                             </label>
-                            <input
+                            <Input
                                 id="university"
                                 name="university"
                                 type="text"
@@ -121,7 +116,6 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                                 value={formData.university}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className={inputClassName}
                                 placeholder="Stanford University"
                             />
                         </div>
@@ -130,7 +124,7 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                             <label htmlFor="department" className="block text-sm font-medium text-gray-700">
                                 Department
                             </label>
-                            <input
+                            <Input
                                 id="department"
                                 name="department"
                                 type="text"
@@ -138,7 +132,6 @@ export default function RegisterProfessorView({ onRegister, loading, error }: Re
                                 value={formData.department}
                                 onChange={handleChange}
                                 disabled={loading}
-                                className={inputClassName}
                                 placeholder="Computer Science"
                             />
                         </div>

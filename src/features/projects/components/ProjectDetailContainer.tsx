@@ -98,6 +98,33 @@ export default function ProjectDetailContainer({ projectId }: ProjectDetailConta
         };
     }, [accessToken, authLoading, projectId, role]);
 
+    useEffect(() => {
+        if (authLoading || !accessToken || role !== "student") return;
+
+        let cancelled = false;
+
+        studentService
+            .checkApplicationStatus(projectId, accessToken)
+            .then((data) => {
+                if (cancelled) return;
+                setApplied(data.exists);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setApplicationsError(
+                        err instanceof Error ? err.message : "Failed to load applications",
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setApplicationsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [accessToken, authLoading, projectId, role]);
+
     async function handleApply(message: string) {
         if (!accessToken) return;
         setApplying(true);

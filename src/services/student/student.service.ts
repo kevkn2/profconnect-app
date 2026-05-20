@@ -1,5 +1,5 @@
 import { API_URL } from "@/config/settings";
-import { StudentProfile } from "./student.dto";
+import { CheckApplicationStatusOutput, StudentProfile } from "./student.dto";
 import {
     ApplyProjectInput,
     ListApplicationsOutput,
@@ -71,9 +71,21 @@ export async function listMyApplications(token: string): Promise<ListApplication
     );
 }
 
+export async function checkApplicationStatus(
+    projectId: string,
+    token: string
+): Promise<CheckApplicationStatusOutput> {
+    return request<CheckApplicationStatusOutput>(
+        `/projects/${projectId}/applications`,
+        token,
+        "Failed to load applications",
+    );
+}
+
 export const studentService = {
     getProfile,
     applyToProject,
     withdrawApplication,
     listMyApplications,
+    checkApplicationStatus,
 };

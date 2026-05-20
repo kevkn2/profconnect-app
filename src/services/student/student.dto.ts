@@ -8,3 +8,7 @@ export interface StudentProfile {
     department: string;
     research_interests: string;
 }
+
+export interface CheckApplicationStatusOutput {
+    exists: boolean;
+}

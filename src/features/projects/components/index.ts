@@ -6,5 +6,8 @@ export { default as ProjectCreateContainer } from "./ProjectCreateContainer";
 export { default as ProjectCreateView } from "./ProjectCreateView";
 export { default as MyApplicationsContainer } from "./MyApplicationsContainer";
 export { default as MyApplicationsView } from "./MyApplicationsView";
+export { default as MyInvitationsContainer } from "./MyInvitationsContainer";
+export { default as MyInvitationsView } from "./MyInvitationsView";
+export { default as InvitationsPanel } from "./InvitationsPanel";
 export { default as ProjectCard } from "./ProjectCard";
 export { default as ApplicantCard } from "./ApplicantCard";

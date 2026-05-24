@@ -7,7 +7,9 @@ import { studentService } from "@/services/student/student.service";
 import { professorService } from "@/services/professor/professor.service";
 import {
     ProjectApplicationOutput,
+    ProjectInvitationOutput,
     ProjectOutput,
+    ProjectStudentBrief,
 } from "@/services/projects/projects.dto";
 import { checkRole } from "@/types/role";
 import ProjectDetailView from "./ProjectDetailView";
@@ -36,6 +38,17 @@ export default function ProjectDetailContainer({ projectId }: ProjectDetailConta
     const [applicationsError, setApplicationsError] = useState<string | null>(null);
     const [reviewingId, setReviewingId] = useState<string | null>(null);
     const [reviewError, setReviewError] = useState<string | null>(null);
+
+    const [invitations, setInvitations] = useState<ProjectInvitationOutput[]>([]);
+    const [invitationsLoading, setInvitationsLoading] = useState(false);
+    const [invitationsError, setInvitationsError] = useState<string | null>(null);
+    const [inviting, setInviting] = useState(false);
+    const [inviteError, setInviteError] = useState<string | null>(null);
+    const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+    const [students, setStudents] = useState<ProjectStudentBrief[]>([]);
+    const [studentsLoading, setStudentsLoading] = useState(false);
+    const [studentsError, setStudentsError] = useState<string | null>(null);
 
     useEffect(() => {
         if (authLoading) return;
@@ -99,6 +112,62 @@ export default function ProjectDetailContainer({ projectId }: ProjectDetailConta
     }, [accessToken, authLoading, projectId, role]);
 
     useEffect(() => {
+        if (authLoading || !accessToken || role !== "professor") return;
+
+        let cancelled = false;
+        setStudentsLoading(true);
+        setStudentsError(null);
+
+        professorService
+            .listStudents(accessToken)
+            .then((data) => {
+                if (!cancelled) setStudents(data.students ?? []);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setStudentsError(
+                        err instanceof Error ? err.message : "Failed to load students",
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setStudentsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [accessToken, authLoading, role]);
+
+    useEffect(() => {
+        if (authLoading || !accessToken || role !== "professor") return;
+
+        let cancelled = false;
+        setInvitationsLoading(true);
+        setInvitationsError(null);
+
+        professorService
+            .listProjectInvitations(projectId, accessToken)
+            .then((data) => {
+                if (!cancelled) setInvitations(data.invitations ?? []);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    setInvitationsError(
+                        err instanceof Error ? err.message : "Failed to load invitations",
+                    );
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setInvitationsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [accessToken, authLoading, projectId, role]);
+
+    useEffect(() => {
         if (authLoading || !accessToken || role !== "student") return;
 
         let cancelled = false;
@@ -136,6 +205,41 @@ export default function ProjectDetailContainer({ projectId }: ProjectDetailConta
             setApplyError(err instanceof Error ? err.message : "Failed to apply");
         } finally {
             setApplying(false);
+        }
+    }
+
+    async function handleInvite(studentId: string, message: string) {
+        if (!accessToken) return;
+        setInviting(true);
+        setInviteError(null);
+        try {
+            const created = await professorService.sendInvitation(
+                projectId,
+                { student_id: studentId, message },
+                accessToken,
+            );
+            setInvitations((prev) => [created, ...prev]);
+        } catch (err) {
+            setInviteError(err instanceof Error ? err.message : "Failed to send invitation");
+            throw err;
+        } finally {
+            setInviting(false);
+        }
+    }
+
+    async function handleCancelInvitation(invitationId: string) {
+        if (!accessToken) return;
+        setCancellingId(invitationId);
+        setInviteError(null);
+        try {
+            await professorService.cancelInvitation(projectId, invitationId, accessToken);
+            setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+        } catch (err) {
+            setInviteError(
+                err instanceof Error ? err.message : "Failed to cancel invitation",
+            );
+        } finally {
+            setCancellingId(null);
         }
     }
 
@@ -181,6 +285,17 @@ export default function ProjectDetailContainer({ projectId }: ProjectDetailConta
             reviewingId={reviewingId}
             reviewError={reviewError}
             onReview={handleReview}
+            invitations={invitations}
+            invitationsLoading={invitationsLoading}
+            invitationsError={invitationsError}
+            inviting={inviting}
+            inviteError={inviteError}
+            cancellingInvitationId={cancellingId}
+            onInvite={handleInvite}
+            onCancelInvitation={handleCancelInvitation}
+            students={students}
+            studentsLoading={studentsLoading}
+            studentsError={studentsError}
         />
     );
 }

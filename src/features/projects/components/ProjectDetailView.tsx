@@ -7,10 +7,13 @@ import Spinner from "@/components/ui/Spinner";
 import Textarea from "@/components/ui/Textarea";
 import {
     ProjectApplicationOutput,
+    ProjectInvitationOutput,
     ProjectOutput,
+    ProjectStudentBrief,
 } from "@/services/projects/projects.dto";
 import { RoleEnum } from "@/types/role";
 import ApplicantCard from "./ApplicantCard";
+import InvitationsPanel from "./InvitationsPanel";
 
 interface ProjectDetailViewProps {
     role: RoleEnum;
@@ -28,6 +31,17 @@ interface ProjectDetailViewProps {
     reviewingId: string | null;
     reviewError: string | null;
     onReview?: (applicationId: string, status: "approved" | "rejected") => void;
+    invitations: ProjectInvitationOutput[];
+    invitationsLoading: boolean;
+    invitationsError: string | null;
+    inviting: boolean;
+    inviteError: string | null;
+    cancellingInvitationId: string | null;
+    onInvite: (studentId: string, message: string) => Promise<void>;
+    onCancelInvitation: (invitationId: string) => void;
+    students: ProjectStudentBrief[];
+    studentsLoading: boolean;
+    studentsError: string | null;
 }
 
 interface ApplicantsSectionProps {
@@ -88,6 +102,17 @@ export default function ProjectDetailView({
     reviewingId,
     reviewError,
     onReview,
+    invitations,
+    invitationsLoading,
+    invitationsError,
+    inviting,
+    inviteError,
+    cancellingInvitationId,
+    onInvite,
+    onCancelInvitation,
+    students,
+    studentsLoading,
+    studentsError,
 }: ProjectDetailViewProps) {
     const [message, setMessage] = useState("");
 
@@ -218,6 +243,24 @@ export default function ProjectDetailView({
                         </div>
                     )}
                 </div>
+
+                {role === "professor" && (
+                    <div className="mt-8">
+                        <InvitationsPanel
+                            invitations={invitations}
+                            invitationsLoading={invitationsLoading}
+                            invitationsError={invitationsError}
+                            inviting={inviting}
+                            inviteError={inviteError}
+                            cancellingInvitationId={cancellingInvitationId}
+                            onInvite={onInvite}
+                            onCancelInvitation={onCancelInvitation}
+                            students={students}
+                            studentsLoading={studentsLoading}
+                            studentsError={studentsError}
+                        />
+                    </div>
+                )}
 
                 {role === "professor" && (
                     <div className="mt-8 space-y-8">

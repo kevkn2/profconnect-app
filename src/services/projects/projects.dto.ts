@@ -1,5 +1,9 @@
 export type ApplicationStatus = "pending" | "approved" | "rejected" | "withdrawn";
 
+export type InvitationStatus = "pending" | "accepted" | "declined" | "cancelled";
+
+export type InvitationResponseStatus = "accepted" | "declined";
+
 export interface ProjectProfessorBrief {
     user_id: string;
     name: string;
@@ -67,4 +71,30 @@ export interface ApplyProjectInput {
 
 export interface ReviewApplicationInput {
     status: "approved" | "rejected";
+}
+
+export interface ProjectInvitationOutput {
+    id: string;
+    status: InvitationStatus;
+    message: string;
+    project: ProjectShortForApp;
+    student: ProjectStudentBrief;
+    responded_at: string;
+}
+
+export interface ListInvitationsOutput {
+    invitations: ProjectInvitationOutput[];
+}
+
+export interface ListStudentsOutput {
+    students: ProjectStudentBrief[];
+}
+
+export interface SendInvitationInput {
+    student_id: string;
+    message: string;
+}
+
+export interface RespondInvitationInput {
+    status: InvitationResponseStatus;
 }

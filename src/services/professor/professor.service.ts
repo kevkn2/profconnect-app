@@ -2,10 +2,14 @@ import { API_URL } from "@/config/settings";
 import { ProfessorProfile } from "./professor.dto";
 import {
     CreateProjectInput,
+    ListInvitationsOutput,
     ListProjectApplicationsByProjectOutput,
+    ListStudentsOutput,
     ProjectApplicationOutput,
+    ProjectInvitationOutput,
     ProjectOutput,
     ReviewApplicationInput,
+    SendInvitationInput,
 } from "@/services/projects/projects.dto";
 
 async function request<T>(
@@ -74,9 +78,57 @@ export async function reviewApplication(
     );
 }
 
+export async function listProjectInvitations(
+    projectId: string,
+    token: string,
+): Promise<ListInvitationsOutput> {
+    return request<ListInvitationsOutput>(
+        `/projects/${projectId}/invitations`,
+        token,
+        "Failed to load invitations",
+    );
+}
+
+export async function sendInvitation(
+    projectId: string,
+    params: SendInvitationInput,
+    token: string,
+): Promise<ProjectInvitationOutput> {
+    return request<ProjectInvitationOutput>(
+        `/projects/${projectId}/invitations`,
+        token,
+        "Failed to send invitation",
+        {
+            method: "POST",
+            body: JSON.stringify(params),
+        },
+    );
+}
+
+export async function listStudents(token: string): Promise<ListStudentsOutput> {
+    return request<ListStudentsOutput>("/students", token, "Failed to load students");
+}
+
+export async function cancelInvitation(
+    projectId: string,
+    invitationId: string,
+    token: string,
+): Promise<void> {
+    await request<unknown>(
+        `/projects/${projectId}/invitations/${invitationId}`,
+        token,
+        "Failed to cancel invitation",
+        { method: "DELETE" },
+    );
+}
+
 export const professorService = {
     getProfile,
     createProject,
     listProjectApplications,
     reviewApplication,
+    listProjectInvitations,
+    sendInvitation,
+    cancelInvitation,
+    listStudents,
 };

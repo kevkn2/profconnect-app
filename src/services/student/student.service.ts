@@ -3,7 +3,10 @@ import { CheckApplicationStatusOutput, StudentProfile } from "./student.dto";
 import {
     ApplyProjectInput,
     ListApplicationsOutput,
+    ListInvitationsOutput,
     ProjectApplicationOutput,
+    ProjectInvitationOutput,
+    RespondInvitationInput,
 } from "@/services/projects/projects.dto";
 
 async function request<T>(
@@ -82,10 +85,36 @@ export async function checkApplicationStatus(
     );
 }
 
+export async function listMyInvitations(token: string): Promise<ListInvitationsOutput> {
+    return request<ListInvitationsOutput>(
+        "/invitations",
+        token,
+        "Failed to load invitations",
+    );
+}
+
+export async function respondInvitation(
+    invitationId: string,
+    params: RespondInvitationInput,
+    token: string,
+): Promise<ProjectInvitationOutput> {
+    return request<ProjectInvitationOutput>(
+        `/invitations/${invitationId}`,
+        token,
+        "Failed to respond to invitation",
+        {
+            method: "PATCH",
+            body: JSON.stringify(params),
+        },
+    );
+}
+
 export const studentService = {
     getProfile,
     applyToProject,
     withdrawApplication,
     listMyApplications,
     checkApplicationStatus,
+    listMyInvitations,
+    respondInvitation,
 };

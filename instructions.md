@@ -37,10 +37,12 @@ Goals:
 Scripts (from [package.json](package.json)):
 
 ```bash
-pnpm dev     # next dev
-pnpm build   # next build
-pnpm start   # next start
-pnpm lint    # eslint
+pnpm dev         # next dev
+pnpm build       # next build
+pnpm start       # next start
+pnpm lint        # eslint
+pnpm test        # vitest run (single pass, CI-friendly)
+pnpm test:watch  # vitest in watch mode
 ```
 
 ---
@@ -429,17 +431,164 @@ Use `app/error.tsx` (Next.js convention) when adding boundary-level handling.
 
 ---
 
-## 14. Testing (Not yet set up)
+## 14. Testing
 
-Recommended when added:
+| Type    | Tool                                    | Status        |
+| ------- | --------------------------------------- | ------------- |
+| Unit    | Vitest                                  | ✅ In use      |
+| UI      | React Testing Library + jsdom           | ✅ In use      |
+| E2E     | Playwright                              | Not yet added |
 
-| Type | Tool            |
-| ---- | --------------- |
-| Unit | Vitest          |
-| UI   | Testing Library |
-| E2E  | Playwright      |
+### Layout
 
-Prioritize: services, containers, role-routing edge cases.
+All tests live under **`src/tests/`** and mirror the source tree they cover. Files use the `*.test.ts` / `*.test.tsx` suffix. The Vitest config scans `src/tests/**/*.test.{ts,tsx}` — application code stays free of test files.
+
+```
+src/tests/
+├── setup.ts                                       ← jest-dom matchers + auto-cleanup
+├── services/                                      ← mirrors src/services/
+│   ├── auth/auth.service.test.ts
+│   ├── projects/projects.service.test.ts
+│   ├── professor/professor.service.test.ts
+│   └── student/student.service.test.ts
+└── features/                                      ← mirrors src/features/
+    ├── auth/components/
+    │   ├── LoginContainer.test.tsx
+    │   └── RegisterContainers.test.tsx            ← admin + student + professor
+    ├── dashboard/components/
+    │   └── DashboardContainer.test.tsx
+    ├── profile/components/
+    │   └── ProfileContainer.test.tsx
+    └── projects/components/
+        ├── InvitationsPanel.test.tsx
+        ├── MyInvitationsContainer.test.tsx
+        └── ProjectDetailContainer.invitations.test.tsx
+```
+
+Always import the code under test via the `@/*` alias (e.g. `@/services/professor/professor.service`), never with relative paths back out of `src/tests/`.
+
+### Running
+
+```bash
+pnpm test         # one-shot, exits non-zero on failure (CI)
+pnpm test:watch   # interactive watch mode during development
+```
+
+### Coverage today
+
+| Area                                       | Tested                                               |
+| ------------------------------------------ | ---------------------------------------------------- |
+| `auth.service`                             | login, register (admin/student/professor) + errors   |
+| `projects.service`                         | listProjects, getProject + errors                    |
+| `professor.service`                        | getProfile, createProject, listProjectApplications, reviewApplication, listProjectInvitations, sendInvitation, cancelInvitation, listStudents + errors |
+| `student.service`                          | getProfile, applyToProject, withdrawApplication, listMyApplications, checkApplicationStatus, listMyInvitations, respondInvitation + errors |
+| `LoginContainer`                           | service wiring, role-based routing, error surfacing  |
+| `Register*Container` (admin/stu/prof)      | form submission, redirect, error surfacing           |
+| `ProfileContainer`                         | role dispatch, unsupported-role, loading/error/no-token |
+| `DashboardContainer`                       | per-role data fetching, empty/error/loading branches |
+| `MyInvitationsContainer`                   | accept/decline flow + state branches                 |
+| `ProjectDetailContainer` (invitation slice)| load students+invitations, send/cancel handlers      |
+| `InvitationsPanel`                         | select disabling, submit/clear/error, cancel button  |
+
+### Service-layer test pattern
+
+Service modules are pure `fetch` wrappers, so unit tests stub `globalThis.fetch` with `vi.stubGlobal` and assert on the request URL, method, headers, and body — plus the resolved/rejected value. These suites don't need a DOM, so each service test file opts out of jsdom with a `// @vitest-environment node` pragma on line 1 (cheaper, faster). See [src/tests/services/professor/professor.service.test.ts](src/tests/services/professor/professor.service.test.ts) for the canonical shape:
+
+```ts
+// @vitest-environment node
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { API_URL } from "@/config/settings";
+import { professorService } from "@/services/professor/professor.service";
+
+describe("professorService.sendInvitation", () => {
+    let fetchMock: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        fetchMock = vi.fn();
+        vi.stubGlobal("fetch", fetchMock);
+    });
+    afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+    });
+
+    it("POSTs the body and returns the created invitation", async () => {
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            status: 201,
+            json: async () => ({ id: "inv-9" /* ... */ }),
+        } as Response);
+
+        await professorService.sendInvitation("proj-1", { student_id: "s-9", message: "" }, "tok");
+
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe(`${API_URL}/api/professor/projects/proj-1/invitations`);
+        expect(init.method).toBe("POST");
+        expect(init.headers).toMatchObject({ Authorization: "Bearer tok" });
+    });
+});
+```
+
+Cover both happy path and the error branch — services throw `${errorPrefix}: ${message ?? "Unknown error"}`, so assert the thrown message includes the prefix. For DELETEs with no body, mock a response whose `json()` rejects so the service's `.catch(() => ({}))` path is exercised.
+
+### Component / container test pattern
+
+UI tests use React Testing Library against a jsdom DOM. Three flavors:
+
+**Pure view components** (props-driven, no hooks) — render with explicit props, assert on the rendered DOM, drive interactions with `@testing-library/user-event`. No mocking needed. See [InvitationsPanel.test.tsx](src/tests/features/projects/components/InvitationsPanel.test.tsx).
+
+**Containers** (hooks + service calls) — `vi.mock()` both `@/hooks/useAuth` and the relevant `@/services/*` modules *before* importing the container. Set `useAuthMock.mockReturnValue({...})` per test to simulate signed-in / loading / signed-out states. Mock the service methods to control the data and assert the container called them with the right arguments. See [MyInvitationsContainer.test.tsx](src/tests/features/projects/components/MyInvitationsContainer.test.tsx), [ProfileContainer.test.tsx](src/tests/features/profile/components/ProfileContainer.test.tsx), and [DashboardContainer.test.tsx](src/tests/features/dashboard/components/DashboardContainer.test.tsx).
+
+**Auth / form containers** (router + service) — additionally mock `next/navigation` so you can assert `router.push(...)` was called with the right redirect. See [LoginContainer.test.tsx](src/tests/features/auth/components/LoginContainer.test.tsx) and [RegisterContainers.test.tsx](src/tests/features/auth/components/RegisterContainers.test.tsx).
+
+```tsx
+const routerPush = vi.fn();
+vi.mock("next/navigation", () => ({
+    useRouter: () => ({ push: routerPush }),
+}));
+vi.mock("@/hooks/useAuth", () => ({ useAuth: vi.fn() }));
+vi.mock("@/services/student/student.service", () => ({
+    studentService: { listMyInvitations: vi.fn(), respondInvitation: vi.fn() },
+}));
+
+import { useAuth } from "@/hooks/useAuth";
+import { studentService } from "@/services/student/student.service";
+import MyInvitationsContainer from "@/features/projects/components/MyInvitationsContainer";
+
+const useAuthMock = vi.mocked(useAuth);
+const listMock = vi.mocked(studentService.listMyInvitations);
+
+it("renders fetched invitations", async () => {
+    useAuthMock.mockReturnValue({ accessToken: "tok", loading: false, /* ... */ } as ReturnType<typeof useAuth>);
+    listMock.mockResolvedValue({ invitations: [/* ... */] });
+    render(<MyInvitationsContainer />);
+    expect(await screen.findByText("Quantum")).toBeInTheDocument();
+});
+```
+
+Rules of thumb:
+- **Mock every service the container can call**, including the ones used by sibling roles, with sensible default resolutions in `beforeEach`. An unmocked call returns `undefined` and the container chains `.then()` on it, blowing up React's effect. Containers like `ProjectDetailContainer` fan out across `projectsService`, `professorService`, and `studentService` — all three need stubs even when the test only cares about one role.
+- Prefer role-based queries (`getByRole("button", { name: /accept/i })`) over text or test-ids. They double as accessibility checks. When multiple labels start with the same word (e.g. "Full name" + "Email address" + "Password"), anchor your regex (`/full name/i`, `/^password$/i`) instead of using `/^name/i`.
+- Use `await screen.findByText(...)` to wait for async effects; reach for `waitFor` only when asserting on negative changes (e.g. a button being removed or a service NOT being called).
+- For mock function callback props passed directly to components, type the mock against the prop signature (`const onInvite: (id: string, msg: string) => Promise<void> = vi.fn(async () => undefined)`). Plain `vi.fn()` is typed as `Mock<Procedure>` and `tsc` won't accept it as a strict prop callback.
+
+### Configuration
+
+[vitest.config.ts](vitest.config.ts) mirrors the `@/*` path alias from `tsconfig.json` so test files can use the same imports as application code. Environment is `jsdom` (needed for React Testing Library); switch to `node` for a single file with `// @vitest-environment node` at the top when pure-fetch tests don't need a DOM.
+
+[src/tests/setup.ts](src/tests/setup.ts) registers `@testing-library/jest-dom` matchers (`toBeInTheDocument`, `toBeDisabled`, …) and calls `cleanup()` after every test so renders don't leak between cases.
+
+### What's missing / next up
+
+Already covered: every service, every feature container, plus the one panel with non-trivial form logic. When adding a new feature, write tests in this order:
+
+1. **Service** (with the `// @vitest-environment node` pragma) — happy path + non-OK + 'Unknown error' fallback.
+2. **Container** — at minimum: data-fetch wiring, error surfacing, the loading / no-token / auth-loading branches.
+3. **View** — only when the view has non-trivial state of its own (forms with derived disabled state, lists with conditional CTAs, etc.). Otherwise the container test exercises it transitively.
+
+Still unwritten:
+- Container tests for `ProjectListContainer`, `ProjectCreateContainer`, `MyApplicationsContainer` and the non-invitation slice of `ProjectDetailContainer` (apply, review applications, withdraw).
+- E2E coverage of the login → dashboard → invite → accept happy path (Playwright is the planned tool — not yet installed).
 
 ---
 

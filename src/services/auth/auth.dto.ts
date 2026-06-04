@@ -40,3 +40,9 @@ export interface LoginResponse {
     role: string;
     type: string;
 }
+
+export interface RefreshTokenRequest {
+    refreshToken: string;
+}
+
+export interface RefreshTokenResponse extends LoginResponse {}

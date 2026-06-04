@@ -1,4 +1,3 @@
-import { API_URL } from "@/config/settings";
 import { ProfessorProfile } from "./professor.dto";
 import {
     CreateProjectInput,
@@ -11,40 +10,17 @@ import {
     ReviewApplicationInput,
     SendInvitationInput,
 } from "@/services/projects/projects.dto";
-
-async function request<T>(
-    path: string,
-    token: string,
-    errorPrefix: string,
-    init: RequestInit = {},
-): Promise<T> {
-    const response = await fetch(`${API_URL}/api/professor${path}`, {
-        ...init,
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...(init.headers ?? {}),
-        },
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-        throw new Error(`${errorPrefix}: ${data.message ?? "Unknown error"}`);
-    }
-
-    return data as T;
-}
+import { requestWithAuth } from "@/utils/authenticated-request";
 
 export async function getProfile(token: string): Promise<ProfessorProfile> {
-    return request<ProfessorProfile>("/profile", token, "Failed to load profile");
+    return requestWithAuth<ProfessorProfile>("/api/professor/profile", token, "Failed to load profile");
 }
 
 export async function createProject(
     params: CreateProjectInput,
     token: string,
 ): Promise<ProjectOutput> {
-    return request<ProjectOutput>("/projects", token, "Failed to create project", {
+    return requestWithAuth<ProjectOutput>("/api/professor/projects", token, "Failed to create project", {
         method: "POST",
         body: JSON.stringify(params),
     });
@@ -54,8 +30,8 @@ export async function listProjectApplications(
     projectId: string,
     token: string,
 ): Promise<ListProjectApplicationsByProjectOutput> {
-    return request<ListProjectApplicationsByProjectOutput>(
-        `/projects/${projectId}/applications`,
+    return requestWithAuth<ListProjectApplicationsByProjectOutput>(
+        `/api/professor/projects/${projectId}/applications`,
         token,
         "Failed to load applications",
     );
@@ -67,8 +43,8 @@ export async function reviewApplication(
     params: ReviewApplicationInput,
     token: string,
 ): Promise<ProjectApplicationOutput> {
-    return request<ProjectApplicationOutput>(
-        `/projects/${projectId}/applications/${applicationId}`,
+    return requestWithAuth<ProjectApplicationOutput>(
+        `/api/professor/projects/${projectId}/applications/${applicationId}`,
         token,
         "Failed to review application",
         {
@@ -82,8 +58,8 @@ export async function listProjectInvitations(
     projectId: string,
     token: string,
 ): Promise<ListInvitationsOutput> {
-    return request<ListInvitationsOutput>(
-        `/projects/${projectId}/invitations`,
+    return requestWithAuth<ListInvitationsOutput>(
+        `/api/professor/projects/${projectId}/invitations`,
         token,
         "Failed to load invitations",
     );
@@ -94,8 +70,8 @@ export async function sendInvitation(
     params: SendInvitationInput,
     token: string,
 ): Promise<ProjectInvitationOutput> {
-    return request<ProjectInvitationOutput>(
-        `/projects/${projectId}/invitations`,
+    return requestWithAuth<ProjectInvitationOutput>(
+        `/api/professor/projects/${projectId}/invitations`,
         token,
         "Failed to send invitation",
         {
@@ -106,7 +82,7 @@ export async function sendInvitation(
 }
 
 export async function listStudents(token: string): Promise<ListStudentsOutput> {
-    return request<ListStudentsOutput>("/students", token, "Failed to load students");
+    return requestWithAuth<ListStudentsOutput>("/api/professor/students", token, "Failed to load students");
 }
 
 export async function cancelInvitation(
@@ -114,8 +90,8 @@ export async function cancelInvitation(
     invitationId: string,
     token: string,
 ): Promise<void> {
-    await request<unknown>(
-        `/projects/${projectId}/invitations/${invitationId}`,
+    await requestWithAuth<unknown>(
+        `/api/professor/projects/${projectId}/invitations/${invitationId}`,
         token,
         "Failed to cancel invitation",
         { method: "DELETE" },

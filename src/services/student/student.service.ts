@@ -1,4 +1,3 @@
-import { API_URL } from "@/config/settings";
 import { CheckApplicationStatusOutput, StudentProfile } from "./student.dto";
 import {
     ApplyProjectInput,
@@ -8,33 +7,10 @@ import {
     ProjectInvitationOutput,
     RespondInvitationInput,
 } from "@/services/projects/projects.dto";
-
-async function request<T>(
-    path: string,
-    token: string,
-    errorPrefix: string,
-    init: RequestInit = {},
-): Promise<T> {
-    const response = await fetch(`${API_URL}/api/student${path}`, {
-        ...init,
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            ...(init.headers ?? {}),
-        },
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-        throw new Error(`${errorPrefix}: ${data.message ?? "Unknown error"}`);
-    }
-
-    return data as T;
-}
+import { requestWithAuth } from "@/utils/authenticated-request";
 
 export async function getProfile(token: string): Promise<StudentProfile> {
-    return request<StudentProfile>("/profile", token, "Failed to load profile");
+    return requestWithAuth<StudentProfile>("/api/student/profile", token, "Failed to load profile");
 }
 
 export async function applyToProject(
@@ -42,8 +18,8 @@ export async function applyToProject(
     params: ApplyProjectInput,
     token: string,
 ): Promise<ProjectApplicationOutput> {
-    return request<ProjectApplicationOutput>(
-        `/projects/${projectId}/applications`,
+    return requestWithAuth<ProjectApplicationOutput>(
+        `/api/student/projects/${projectId}/applications`,
         token,
         "Failed to submit application",
         {
@@ -58,8 +34,8 @@ export async function withdrawApplication(
     applicationId: string,
     token: string,
 ): Promise<void> {
-    await request<unknown>(
-        `/projects/${projectId}/applications/${applicationId}`,
+    await requestWithAuth<unknown>(
+        `/api/student/projects/${projectId}/applications/${applicationId}`,
         token,
         "Failed to withdraw application",
         { method: "DELETE" },
@@ -67,8 +43,8 @@ export async function withdrawApplication(
 }
 
 export async function listMyApplications(token: string): Promise<ListApplicationsOutput> {
-    return request<ListApplicationsOutput>(
-        "/applications",
+    return requestWithAuth<ListApplicationsOutput>(
+        "/api/student/applications",
         token,
         "Failed to load applications",
     );
@@ -78,16 +54,16 @@ export async function checkApplicationStatus(
     projectId: string,
     token: string
 ): Promise<CheckApplicationStatusOutput> {
-    return request<CheckApplicationStatusOutput>(
-        `/projects/${projectId}/applications`,
+    return requestWithAuth<CheckApplicationStatusOutput>(
+        `/api/student/projects/${projectId}/applications`,
         token,
         "Failed to load applications",
     );
 }
 
 export async function listMyInvitations(token: string): Promise<ListInvitationsOutput> {
-    return request<ListInvitationsOutput>(
-        "/invitations",
+    return requestWithAuth<ListInvitationsOutput>(
+        "/api/student/invitations",
         token,
         "Failed to load invitations",
     );
@@ -98,8 +74,8 @@ export async function respondInvitation(
     params: RespondInvitationInput,
     token: string,
 ): Promise<ProjectInvitationOutput> {
-    return request<ProjectInvitationOutput>(
-        `/invitations/${invitationId}`,
+    return requestWithAuth<ProjectInvitationOutput>(
+        `/api/student/invitations/${invitationId}`,
         token,
         "Failed to respond to invitation",
         {

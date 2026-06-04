@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+    clearSession,
+    loadSessionFromStorage,
+    saveSession,
+    subscribeSession,
+    type AuthSession,
+} from "@/services/auth/sessions/session";
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -14,50 +21,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// React-only auth manager. Session persistence lives in the service layer;
+// this hook just mirrors that session into component state and exposes actions.
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [accessToken, setAccessToken] = useState<string | null>(null);
-    const [refreshToken, setRefreshToken] = useState<string | null>(null);
-    const [role, setRole] = useState<string | null>(null);
+    const [session, setSessionState] = useState<AuthSession | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedAccessToken = localStorage.getItem("accessToken");
-        const storedRefreshToken = localStorage.getItem("refreshToken");
-        const storedRole = localStorage.getItem("role");
-        if (storedAccessToken) {
-            setAccessToken(storedAccessToken);
-            setRefreshToken(storedRefreshToken);
-            setRole(storedRole);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-        }
+        setSessionState(loadSessionFromStorage());
         setLoading(false);
+
+        return subscribeSession(setSessionState);
     }, []);
 
     function login(accessToken: string, refreshToken: string, role: string) {
-        localStorage.setItem("accessToken", accessToken);
-        localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("role", role);
-        setAccessToken(accessToken);
-        setRefreshToken(refreshToken);
-        setRole(role);
-        setIsAuthenticated(true);
+        saveSession({ accessToken, refreshToken, role });
     }
 
     function logout() {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("role");
-        setAccessToken(null);
-        setRefreshToken(null);
-        setRole(null);
-        setIsAuthenticated(false);
+        clearSession();
     }
 
+    const isAuthenticated = Boolean(session?.accessToken);
+
     return (
-        <AuthContext.Provider value={{ isAuthenticated, accessToken, refreshToken, role, loading, login, logout }}>
+        <AuthContext.Provider
+            value={{
+                isAuthenticated,
+                accessToken: session?.accessToken ?? null,
+                refreshToken: session?.refreshToken ?? null,
+                role: session?.role ?? null,
+                loading,
+                login,
+                logout,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

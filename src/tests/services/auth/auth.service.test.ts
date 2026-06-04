@@ -74,6 +74,39 @@ describe("authService", () => {
         });
     });
 
+    describe("refreshSession", () => {
+        it("POSTs to /api/auth/refresh with the refresh token payload", async () => {
+            const body = {
+                accessToken: "new-a",
+                refreshToken: "new-r",
+                role: "student",
+                type: "Bearer",
+            };
+            fetchMock.mockResolvedValueOnce(mockJsonResponse(body));
+
+            const result = await authService.refreshSession({
+                refreshToken: "old-r",
+            });
+
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            const [url, init] = fetchMock.mock.calls[0];
+            expect(url).toBe(`${API_URL}/api/auth/refresh`);
+            expect(init.method).toBe("POST");
+            expect(init.body).toBe(JSON.stringify({ refreshToken: "old-r" }));
+            expect(result).toEqual(body);
+        });
+
+        it("throws 'Session refresh failed: ...' on error", async () => {
+            fetchMock.mockResolvedValueOnce(
+                mockJsonResponse({ message: "expired" }, { status: 401 }),
+            );
+
+            await expect(
+                authService.refreshSession({ refreshToken: "old-r" }),
+            ).rejects.toThrow("Session refresh failed: expired");
+        });
+    });
+
     describe("register (admin)", () => {
         it("POSTs to /register/admin and injects role: 'admin'", async () => {
             fetchMock.mockResolvedValueOnce(

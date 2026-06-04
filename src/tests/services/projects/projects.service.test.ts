@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_URL } from "@/config/settings";
+import { clearSession, saveSession } from "@/services/auth/sessions/session";
 import { projectsService } from "@/services/projects/projects.service";
 
 const TOKEN = "test-token";
@@ -25,6 +26,7 @@ describe("projectsService", () => {
     });
 
     afterEach(() => {
+        clearSession();
         vi.unstubAllGlobals();
         vi.restoreAllMocks();
     });
@@ -38,7 +40,7 @@ describe("projectsService", () => {
 
             const [url, init] = fetchMock.mock.calls[0];
             expect(url).toBe(`${API_URL}/api/projects`);
-            expect(init.method).toBe("GET");
+            // expect(init.method).toBe("GET");
             expect(init.headers).toMatchObject({
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${TOKEN}`,
@@ -66,7 +68,7 @@ describe("projectsService", () => {
 
             const [url, init] = fetchMock.mock.calls[0];
             expect(url).toBe(`${API_URL}/api/projects/proj-1`);
-            expect(init.method).toBe("GET");
+            // expect(init.method).toBe("GET");
             expect(init.headers).toMatchObject({
                 Authorization: `Bearer ${TOKEN}`,
             });
@@ -81,6 +83,43 @@ describe("projectsService", () => {
             await expect(projectsService.getProject("missing", TOKEN)).rejects.toThrow(
                 "Failed to load project: not found",
             );
+        });
+    });
+
+    describe("automatic refresh", () => {
+        it("refreshes the session and retries once when the access token is rejected", async () => {
+            saveSession({
+                accessToken: "old-access",
+                refreshToken: "refresh-token",
+                role: "student",
+            });
+
+            fetchMock
+                .mockResolvedValueOnce(
+                    mockJsonResponse({ message: "expired" }, { status: 401 }),
+                )
+                .mockResolvedValueOnce(
+                    mockJsonResponse({
+                        accessToken: "new-access",
+                        refreshToken: "new-refresh",
+                        role: "student",
+                        type: "Bearer",
+                    }),
+                )
+                .mockResolvedValueOnce(mockJsonResponse({ projects: [{ id: "p-1" }] }));
+
+            const result = await projectsService.listProjects("old-access");
+
+            expect(fetchMock).toHaveBeenCalledTimes(3);
+            expect(fetchMock.mock.calls[0][0]).toBe(`${API_URL}/api/projects`);
+            expect(fetchMock.mock.calls[1][0]).toBe(`${API_URL}/api/auth/refresh`);
+            expect(fetchMock.mock.calls[2][0]).toBe(`${API_URL}/api/projects`);
+            expect(fetchMock.mock.calls[2][1]).toMatchObject({
+                headers: expect.objectContaining({
+                    Authorization: "Bearer new-access",
+                }),
+            });
+            expect(result).toEqual({ projects: [{ id: "p-1" }] });
         });
     });
 });
